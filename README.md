@@ -61,8 +61,9 @@ To update later: replace the files, then press the **Reload** icon on the extens
 ### Option B — Userscript (Tampermonkey / Violentmonkey)
 
 1. Install [Tampermonkey](https://www.tampermonkey.net/) or Violentmonkey.
-2. Open the dashboard → **+** → replace the template with the contents of `smarttube-sender.user.js` → save.
-3. Open a YouTube video.
+2. Open [`smarttube-sender.user.js`](https://raw.githubusercontent.com/chngrkvc/smarttube-tv-sender/main/smarttube-sender.user.js) — your script manager offers to install it.
+   (Manual alternative: dashboard → **+** → replace the template with the file contents → save.)
+3. Open a YouTube video. The script also updates itself from this repository.
 
 > Do not run both versions at the same time — you would get two buttons.
 

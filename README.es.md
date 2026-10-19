@@ -61,8 +61,9 @@ Para actualizar: sustituye los archivos y pulsa el icono **Recargar** de la tarj
 ### Opción B — Userscript (Tampermonkey / Violentmonkey)
 
 1. Instala [Tampermonkey](https://www.tampermonkey.net/) o Violentmonkey.
-2. Abre el panel → **+** → sustituye la plantilla por el contenido de `smarttube-sender.user.js` → guarda.
-3. Abre un vídeo de YouTube.
+2. Abre [`smarttube-sender.user.js`](https://raw.githubusercontent.com/chngrkvc/smarttube-tv-sender/main/smarttube-sender.user.js) — el gestor de scripts ofrece instalarlo.
+   (Alternativa manual: panel → **+** → sustituye la plantilla por el contenido → guarda.)
+3. Abre un vídeo de YouTube. El script se actualiza solo desde este repositorio.
 
 > No ejecutes las dos versiones a la vez: aparecerían dos botones.
 

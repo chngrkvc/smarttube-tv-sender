@@ -59,8 +59,9 @@ Güncelleme: dosyaları değiştir, sonra eklenti kartındaki **Yenile** simgesi
 ### Yol B — Userscript (Tampermonkey / Violentmonkey)
 
 1. [Tampermonkey](https://www.tampermonkey.net/) veya Violentmonkey kur.
-2. Paneli aç → **+** → şablonu sil, `smarttube-sender.user.js` içeriğini yapıştır → kaydet.
-3. Bir YouTube videosu aç.
+2. [`smarttube-sender.user.js`](https://raw.githubusercontent.com/chngrkvc/smarttube-tv-sender/main/smarttube-sender.user.js) bağlantısını aç — script yöneticisi kurulumu önerir.
+   (Elle: panel → **+** → şablonu sil, dosya içeriğini yapıştır → kaydet.)
+3. Bir YouTube videosu aç. Script güncellemelerini bu depodan otomatik kontrol eder.
 
 > İki sürümü aynı anda çalıştırma — iki düğme görünür.
 
