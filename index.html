@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Send to SmartTube</title>
+<meta name="description" content="Play the YouTube video you are watching on your TV with SmartTube. No account, no mirroring.">
+<link rel="icon" href="extension/icons/icon32.png">
+<style>
+  :root {
+    --bg: #0b0b0d;
+    --panel: #141418;
+    --panel-2: #1b1b21;
+    --text: #f4f4f5;
+    --muted: #a1a1aa;
+    --line: #2a2a32;
+    --red: #ff0033;
+    --blue: #3ea6ff;
+    --radius: 16px;
+    max-width: 100%;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(1100px 520px at 50% -180px, rgba(255, 0, 51, .22), transparent 65%),
+      var(--bg);
+    color: var(--text);
+    font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  main, .topbar { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
+  html:not(.i18n-ready) main { opacity: 0; }
+  main { opacity: 1; transition: opacity .2s ease; }
+
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 20px; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--text); font-weight: 600; }
+  .brand:hover { text-decoration: none; }
+  .brand img { border-radius: 7px; }
+  .langs { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 999px; background: rgba(20, 20, 24, .8); }
+  .langs button {
+    border: 0; border-radius: 999px; padding: 6px 12px; cursor: pointer;
+    background: transparent; color: var(--muted); font: inherit; font-size: 13px;
+  }
+  .langs button:hover { color: var(--text); }
+  .langs button.active { background: var(--red); color: #fff; }
+
+  .hero { text-align: center; padding: 72px 0 40px; }
+  .hero img { border-radius: 26px; box-shadow: 0 18px 60px rgba(255, 0, 51, .28); }
+  h1 { font-size: clamp(34px, 6vw, 56px); line-height: 1.08; margin: 24px 0 14px; letter-spacing: -.02em; }
+  .tagline { max-width: 640px; margin: 0 auto; color: var(--muted); font-size: clamp(16px, 2.2vw, 19px); }
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 28px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; padding: 12px 22px; border-radius: 999px; font-weight: 600; font-size: 15px; }
+  .btn:hover { text-decoration: none; }
+  .btn.primary { background: var(--red); color: #fff; box-shadow: 0 10px 30px rgba(255, 0, 51, .3); }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn.ghost { border: 1px solid var(--line); color: var(--text); background: var(--panel); }
+  .btn.ghost:hover { background: var(--panel-2); }
+
+  section { padding: 30px 0; }
+  h2 { font-size: clamp(22px, 3.4vw, 30px); margin: 0 0 18px; letter-spacing: -.01em; }
+  h3 { margin: 0 0 8px; font-size: 17px; }
+  p { margin: 0 0 12px; }
+  .muted, .note { color: var(--muted); }
+  .note { font-size: 14px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+  .feature, .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+  .feature h3 { margin: 8px 0 4px; }
+  .feature p { margin: 0; color: var(--muted); font-size: 14.5px; }
+  .feature-icon { font-size: 22px; }
+
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+  .card { padding: 20px; }
+  .card h3 { display: flex; align-items: center; gap: 8px; }
+  .badge { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #052e16; background: #4ade80; padding: 3px 8px; border-radius: 999px; }
+  ol, ul { margin: 0; padding-left: 22px; }
+  li { margin: 0 0 8px; }
+  li:last-child { margin-bottom: 0; }
+  code { background: #26262e; padding: 2px 6px; border-radius: 6px; font-size: .92em; }
+
+  .steps { padding-left: 22px; }
+  .privacy ul { color: var(--muted); }
+  footer { border-top: 1px solid var(--line); margin-top: 40px; padding: 24px 20px 40px; color: var(--muted); font-size: 13.5px; text-align: center; }
+  footer p { margin: 0; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="#top">
+    <img src="extension/icons/icon48.png" width="28" height="28" alt="">
+    <span data-i18n="brand">Send to SmartTube</span>
+  </a>
+  <nav class="langs" aria-label="Language">
+    <button type="button" data-lang="tr" lang="tr">Türkçe</button>
+    <button type="button" data-lang="en" lang="en">English</button>
+    <button type="button" data-lang="es" lang="es">Español</button>
+  </nav>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <img src="extension/icons/icon128.png" width="112" height="112" alt="">
+    <h1 data-i18n="title">Send to SmartTube</h1>
+    <p class="tagline" data-i18n="tagline">Play the YouTube video you are watching on your TV. One click, no account, no screen mirroring.</p>
+    <div class="cta">
+      <a class="btn primary" href="#install" data-i18n="ctaInstall">Install</a>
+      <a class="btn ghost" id="readme-link" href="README.md" data-i18n="ctaReadme">Read the README</a>
+    </div>
+  </section>
+
+  <section>
+    <h2 data-i18n="featuresTitle">Why this one?</h2>
+    <div class="grid" data-list="features"></div>
+  </section>
+
+  <section id="install">
+    <h2 data-i18n="installTitle">Install</h2>
+    <div class="two">
+      <article class="card">
+        <h3><span data-i18n="installATitle">Extension</span> <span class="badge" data-i18n="recommended">recommended</span></h3>
+        <ol data-list="installA"></ol>
+      </article>
+      <article class="card">
+        <h3 data-i18n="installBTitle">Userscript</h3>
+        <ol data-list="installB"></ol>
+      </article>
+    </div>
+    <p class="note" data-i18n="installNote" style="margin-top:14px"></p>
+  </section>
+
+  <section>
+    <h2 data-i18n="pairTitle">Pair once</h2>
+    <ol class="steps" data-list="pair"></ol>
+    <p class="note" data-i18n="pairNote" style="margin-top:12px"></p>
+  </section>
+
+  <section class="privacy">
+    <h2 data-i18n="privacyTitle">Privacy</h2>
+    <ul data-list="privacy"></ul>
+  </section>
+</main>
+
+<footer>
+  <p data-i18n="footer"></p>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  var SUPPORTED = ['tr', 'en', 'es'];
+  var README = { tr: 'README.tr.md', en: 'README.md', es: 'README.es.md' };
+
+  var I18N = {
+    en: {
+      docTitle: 'Send to SmartTube',
+      brand: 'Send to SmartTube',
+      title: 'Send to SmartTube',
+      tagline: 'Play the YouTube video you are watching on your TV. One click, no account, no screen mirroring.',
+      ctaInstall: 'Install',
+      ctaReadme: 'Read the README',
+      featuresTitle: 'Why this one?',
+      features: [
+        { icon: '📺', title: 'Button in the player', text: 'Sits next to CC, settings and fullscreen — not a floating widget.' },
+        { icon: '▶️', title: 'One click or Alt + S', text: 'The video starts on the TV and the browser player pauses.' },
+        { icon: '🟦', title: 'Cast-style status bar', text: 'Thumbnail, title, live state, progress, pause, next and stop.' },
+        { icon: '♻️', title: 'Survives reloads', text: 'The bar comes back after a page refresh or a browser restart.' },
+        { icon: '🌍', title: 'TR / EN / ES', text: 'The interface follows your system language automatically.' },
+        { icon: '🔒', title: 'No account, no tracking', text: 'Requests go only to youtube.com, cookies are never sent.' }
+      ],
+      installTitle: 'Install',
+      installATitle: 'Extension',
+      installBTitle: 'Userscript',
+      recommended: 'recommended',
+      installA: [
+        'Download the repository (Code → Download ZIP) and extract it.',
+        'Open chrome://extensions and turn on Developer mode.',
+        'Click “Load unpacked” and pick the extension folder.',
+        'Open any YouTube video — the 📺 button appears in the player.'
+      ],
+      installB: [
+        'Install Tampermonkey or Violentmonkey.',
+        'Create a new script and paste the contents of smarttube-sender.user.js.',
+        'Save it and open any YouTube video.'
+      ],
+      installNote: 'Do not run both versions at the same time — you would get two buttons.',
+      pairTitle: 'Pair once',
+      pair: [
+        'Open SmartTube on the TV.',
+        'Go to Settings → Remote control → Add device and note the code.',
+        'Click 📺 in the browser, type the code and press Connect.'
+      ],
+      pairNote: 'The code is stored locally and only asked once. Keep the Remote control switch enabled.',
+      privacyTitle: 'Privacy',
+      privacy: [
+        'All requests go to https://www.youtube.com/api/lounge with credentials omitted.',
+        'Only the TV identity and the last cast are stored in localStorage.',
+        'Requested permission: youtube.com only.',
+        'No analytics, no remote code, no telemetry, no third-party servers.'
+      ],
+      footer: 'MIT licensed · Not affiliated with YouTube, Google or SmartTube.'
+    },
+
+    tr: {
+      docTitle: "SmartTube TV'ye Gönder",
+      brand: "SmartTube TV'ye Gönder",
+      title: "SmartTube TV'ye Gönder",
+      tagline: "İzlediğin YouTube videosunu TV'de oynat. Tek tık, hesap yok, ekran yansıtma yok.",
+      ctaInstall: 'Kurulum',
+      ctaReadme: "README'yi oku",
+      featuresTitle: 'Neden bu?',
+      features: [
+        { icon: '📺', title: 'Düğme oynatıcının içinde', text: 'CC, ayarlar ve tam ekranın yanında — köşede yüzen bir kutu değil.' },
+        { icon: '▶️', title: 'Tek tık veya Alt + S', text: 'Video TV\'de başlar, tarayıcıdaki oynatıcı duraklar.' },
+        { icon: '🟦', title: 'Cast tarzı durum çubuğu', text: 'Kapak görseli, başlık, canlı durum, ilerleme, duraklat, sonraki ve bitir.' },
+        { icon: '♻️', title: 'Yenilemeye dayanıklı', text: 'Sayfa yenilenince veya tarayıcı kapanıp açılınca çubuk geri gelir.' },
+        { icon: '🌍', title: 'TR / EN / ES', text: 'Arayüz sistem diline göre otomatik seçilir.' },
+        { icon: '🔒', title: 'Hesap yok, takip yok', text: 'İstekler yalnızca youtube.com\'a gider, çerez gönderilmez.' }
+      ],
+      installTitle: 'Kurulum',
+      installATitle: 'Eklenti',
+      installBTitle: 'Userscript',
+      recommended: 'önerilen',
+      installA: [
+        'Depoyu indir (Code → Download ZIP) ve çıkart.',
+        'chrome://extensions sayfasını aç, Geliştirici modu\'nu aç.',
+        '“Paketlenmemiş öğe yükle” → extension klasörünü seç.',
+        'Herhangi bir YouTube videosu aç — 📺 düğmesi oynatıcıda görünür.'
+      ],
+      installB: [
+        'Tampermonkey veya Violentmonkey kur.',
+        'Yeni script oluştur, smarttube-sender.user.js içeriğini yapıştır.',
+        'Kaydet ve bir YouTube videosu aç.'
+      ],
+      installNote: 'İki sürümü aynı anda çalıştırma — iki düğme görünür.',
+      pairTitle: 'Bir kez eşleştir',
+      pair: [
+        "TV'de SmartTube'u aç.",
+        'Ayarlar → Remote control → Add device → ekrandaki kodu not al.',
+        'Tarayıcıda 📺 düğmesine bas, kodu yaz ve Bağlan\'a bas.'
+      ],
+      pairNote: 'Kod yerel olarak saklanır ve yalnızca bir kez sorulur. Remote control anahtarı açık kalsın.',
+      privacyTitle: 'Gizlilik',
+      privacy: [
+        'Tüm istekler https://www.youtube.com/api/lounge adresine, çerez gönderilmeden gider.',
+        "localStorage'da yalnızca TV kimliği ve son yayın tutulur.",
+        'İstenen izin: yalnızca youtube.com.',
+        'Analitik yok, uzaktan kod yok, telemetri yok, 3. taraf sunucu yok.'
+      ],
+      footer: 'MIT lisansı · YouTube, Google veya SmartTube ile bağlantılı değildir.'
+    },
+
+    es: {
+      docTitle: 'Enviar a SmartTube',
+      brand: 'Enviar a SmartTube',
+      title: 'Enviar a SmartTube',
+      tagline: 'Reproduce en la TV el vídeo de YouTube que estás viendo. Un clic, sin cuenta y sin duplicar pantalla.',
+      ctaInstall: 'Instalar',
+      ctaReadme: 'Leer el README',
+      featuresTitle: '¿Por qué este?',
+      features: [
+        { icon: '📺', title: 'Botón en el reproductor', text: 'Junto a CC, ajustes y pantalla completa — no un flotante en la esquina.' },
+        { icon: '▶️', title: 'Un clic o Alt + S', text: 'El vídeo empieza en la TV y el reproductor del navegador se pausa.' },
+        { icon: '🟦', title: 'Barra de emisión estilo Cast', text: 'Miniatura, título, estado en vivo, progreso, pausa, siguiente y detener.' },
+        { icon: '♻️', title: 'Sobrevive a las recargas', text: 'La barra vuelve tras recargar la página o reiniciar el navegador.' },
+        { icon: '🌍', title: 'TR / EN / ES', text: 'La interfaz sigue automáticamente el idioma del sistema.' },
+        { icon: '🔒', title: 'Sin cuenta ni seguimiento', text: 'Solo se contacta con youtube.com y nunca se envían cookies.' }
+      ],
+      installTitle: 'Instalación',
+      installATitle: 'Extensión',
+      installBTitle: 'Userscript',
+      recommended: 'recomendada',
+      installA: [
+        'Descarga el repositorio (Code → Download ZIP) y descomprímelo.',
+        'Abre chrome://extensions y activa el Modo de desarrollador.',
+        'Pulsa “Cargar descomprimida” y elige la carpeta extension.',
+        'Abre cualquier vídeo de YouTube — el botón 📺 aparece en el reproductor.'
+      ],
+      installB: [
+        'Instala Tampermonkey o Violentmonkey.',
+        'Crea un script nuevo y pega el contenido de smarttube-sender.user.js.',
+        'Guárdalo y abre cualquier vídeo de YouTube.'
+      ],
+      installNote: 'No ejecutes las dos versiones a la vez: aparecerían dos botones.',
+      pairTitle: 'Emparejar una vez',
+      pair: [
+        'Abre SmartTube en la TV.',
+        'Ve a Ajustes → Remote control → Add device y apunta el código.',
+        'Pulsa 📺 en el navegador, escribe el código y pulsa Conectar.'
+      ],
+      pairNote: 'El código se guarda localmente y solo se pide una vez. Mantén activado el interruptor Remote control.',
+      privacyTitle: 'Privacidad',
+      privacy: [
+        'Todas las peticiones van a https://www.youtube.com/api/lounge sin credenciales.',
+        'Solo se guardan en localStorage la identidad de la TV y la última emisión.',
+        'Permiso solicitado: solo youtube.com.',
+        'Sin analíticas, sin código remoto, sin telemetría, sin servidores de terceros.'
+      ],
+      footer: 'Licencia MIT · No afiliado a YouTube, Google ni SmartTube.'
+    }
+  };
+
+  function detect() {
+    var fromUrl = '';
+    try {
+      fromUrl = (new URLSearchParams(location.search).get('lang') || '').toLowerCase();
+    } catch (e) {
+      fromUrl = '';
+    }
+    if (SUPPORTED.indexOf(fromUrl) !== -1) return fromUrl;
+
+    var saved = '';
+    try {
+      saved = (localStorage.getItem('stl.lang') || '').toLowerCase();
+    } catch (e) {
+      saved = '';
+    }
+    if (SUPPORTED.indexOf(saved) !== -1) return saved;
+
+    var list = (navigator.languages && navigator.languages.length)
+      ? navigator.languages
+      : [navigator.language || 'en'];
+    for (var i = 0; i < list.length; i++) {
+      var code = String(list[i] || '').toLowerCase().slice(0, 2);
+      if (SUPPORTED.indexOf(code) !== -1) return code;
+    }
+    return 'en';
+  }
+
+  function fillList(target, items) {
+    target.textContent = '';
+    var ordered = target.tagName === 'OL' || target.tagName === 'UL';
+    (items || []).forEach(function (item) {
+      if (ordered) {
+        var li = document.createElement('li');
+        li.textContent = item;
+        target.appendChild(li);
+        return;
+      }
+      var card = document.createElement('article');
+      card.className = 'feature';
+      var icon = document.createElement('span');
+      icon.className = 'feature-icon';
+      icon.textContent = item.icon;
+      var heading = document.createElement('h3');
+      heading.textContent = item.title;
+      var text = document.createElement('p');
+      text.textContent = item.text;
+      card.appendChild(icon);
+      card.appendChild(heading);
+      card.appendChild(text);
+      target.appendChild(card);
+    });
+  }
+
+  function apply(code) {
+    var dict = I18N[code] || I18N.en;
+    document.documentElement.lang = code;
+    document.title = dict.docTitle;
+
+    document.querySelectorAll('[data-i18n]').forEach(function (element) {
+      var value = dict[element.getAttribute('data-i18n')];
+      if (typeof value === 'string') element.textContent = value;
+    });
+
+    document.querySelectorAll('[data-list]').forEach(function (element) {
+      fillList(element, dict[element.getAttribute('data-list')]);
+    });
+
+    var readme = document.getElementById('readme-link');
+    if (readme) readme.setAttribute('href', README[code] || README.en);
+
+    document.querySelectorAll('[data-lang]').forEach(function (button) {
+      var active = button.getAttribute('data-lang') === code;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+
+    document.documentElement.classList.add('i18n-ready');
+  }
+
+  apply(detect());
+
+  document.querySelectorAll('[data-lang]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      var code = button.getAttribute('data-lang');
+      try {
+        localStorage.setItem('stl.lang', code);
+      } catch (e) {
+        // yoksay
+      }
+      apply(code);
+    });
+  });
+})();
+</script>
+</body>
+</html>

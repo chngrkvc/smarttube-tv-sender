@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "Send to SmartTube"
+  },
+  "extDescription": {
+    "message": "Open the YouTube video you are watching in SmartTube on your Android TV. No screen mirroring; the video plays natively."
+  }
+}

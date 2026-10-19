@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "SmartTube TV'ye Gönder"
+  },
+  "extDescription": {
+    "message": "İzlediğin YouTube videosunu SmartTube (Android TV) uygulamasında açar. Ekran yansıtma yapmaz; video TV'de native oynar."
+  }
+}

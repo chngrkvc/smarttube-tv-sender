@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<!-- YouTube'un uyguladığı kısıt: innerHTML gibi TrustedHTML isteyen API'leri engeller -->
+<meta http-equiv="Content-Security-Policy" content="require-trusted-types-for 'script'">
+<title>SmartTube Sender — test koşumu</title>
+<style>
+  body { margin: 0; padding: 24px; background: #0f0f0f; color: #eee; font: 14px/1.6 system-ui, sans-serif; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  p.note { color: #999; margin: 0 0 20px; }
+  pre { background: #1b1b1b; border: 1px solid #2c2c2c; border-radius: 10px; padding: 14px; overflow: auto; max-height: 52vh; }
+  code { color: #7ee787; }
+
+  /* Gerçek YouTube oynatıcısının küçük bir taklidi: sağ alt kontrol kümesi */
+  .html5-video-player { position: relative; width: 640px; height: 360px; background: #000; margin: 0 0 18px; overflow: hidden; }
+  .html5-video-player video { width: 100%; height: 100%; display: block; background: #000; }
+  .ytp-right-controls { position: absolute; right: 0; bottom: 0; display: flex; align-items: center; height: 40px; padding: 0 6px; }
+  .ytp-button { width: 36px; height: 36px; border: 0; background: transparent; color: #fff; opacity: .9; cursor: pointer; font-size: 15px; }
+</style>
+</head>
+<body>
+<h1>SmartTube Sender — sahte TV ile uçtan uca test</h1>
+<p class="note">
+  Yalnızca geliştirme testi içindir. <code>window.URL</code> ve <code>window.fetch</code> sahte kurulur;
+  gerçek YouTube'a veya gerçek bir TV'ye istek gitmez. Userscript <code>../smarttube-sender.user.js</code> olarak yüklenir.
+</p>
+
+<div class="html5-video-player" id="movie_player">
+  <video muted playsinline></video>
+  <div class="ytp-right-controls">
+    <button class="ytp-button ytp-subtitles-button" aria-label="Altyazılar">CC</button>
+    <button class="ytp-button ytp-settings-button" aria-label="Ayarlar">⚙</button>
+    <button class="ytp-button ytp-fullscreen-button" aria-label="Tam ekran">⛶</button>
+  </div>
+</div>
+
+<pre id="log">hazır</pre>
+
+<script>
+  // Test dili: sessionStorage['stc:lang'] (varsayılan tr-TR). Userscript
+  // navigator.languages ile sistemi taklit ettiğimiz için bunu okuyor.
+  var testLang = sessionStorage.getItem('stc:lang') || 'tr-TR';
+  Object.defineProperty(navigator, 'language', { get: function () { return testLang; }, configurable: true });
+  Object.defineProperty(navigator, 'languages', { get: function () { return [testLang, 'en-US']; }, configurable: true });
+
+  // --- test durumu -----------------------------------------------------------
+  window.__test = {
+    log: [],
+    pass: 0,
+    fail: 0,
+    videoId: 'dQw4w9WgXcQ',
+    tvOnline: true,
+    tokenValid: true,
+    commandStatus: Number(sessionStorage.getItem('stc:commandStatus') || 200),
+    pauseCalled: false,
+    requests: [],
+    commands: []
+  };
+
+  function logLine(kind, text) {
+    window.__test.log.push('[' + kind + '] ' + text);
+    document.getElementById('log').textContent = window.__test.log.join('\n');
+  }
+  function ok(name) { window.__test.pass++; logLine('ok', name); }
+  function fail(name) { window.__test.fail++; logLine('FAIL', name); }
+  window.__test.ok = ok;
+  window.__test.fail = fail;
+  window.__test.setCommandStatus = function (status) {
+    window.__test.commandStatus = status;
+    sessionStorage.setItem('stc:commandStatus', String(status));
+  };
+  window.__test.clean = function () {
+    localStorage.removeItem('smarttube-sender:screen-id');
+    localStorage.removeItem('smarttube-sender:cast');
+    sessionStorage.removeItem('stc:commandStatus');
+    sessionStorage.removeItem('stc:lang');
+    window.__test.videoId = 'dQw4w9WgXcQ';
+  };
+
+  // Yerel videonun duraklatıldığını doğrulayabilmek için pause'u gözlemle
+  var player = document.querySelector('#movie_player video');
+  player.pause = function () { window.__test.pauseCalled = true; logLine('bilgi', 'yerel video duraklatıldı'); };
+
+  // --- sahte konum: youtube.com/watch?v=... ---------------------------------
+  var RealURL = window.URL;
+  window.URL = class extends RealURL {
+    constructor(input, base) {
+      var value = String(input);
+      if (value.indexOf('http://127.0.0.1') === 0 || value.indexOf('http://localhost') === 0) {
+        value = 'https://www.youtube.com/watch?v=' + window.__test.videoId;
+      }
+      super(value, base);
+    }
+  };
+
+  // --- sahte Lounge API ------------------------------------------------------
+  var EVENT_ID = 100;
+  function encodeChunk(events) {
+    var json = JSON.stringify(events);
+    return json.length + '\n' + json;
+  }
+  function loungeEvent(type, arg) {
+    EVENT_ID += 1;
+    return [EVENT_ID, arg === undefined ? [type] : [type, arg]];
+  }
+  var HANDSHAKE = [[5, ['c', 'SID-test']], [6, ['S', 'GSESSION-test']]];
+  var TV = { videoId: 'dQw4w9WgXcQ', currentTime: '42', duration: '212', state: '1' };
+
+  window.fetch = function (url, options) {
+    var href = String(url);
+    var body = String((options && options.body) || '');
+    window.__test.requests.push(options.method + ' ' + href + ' :: ' + body);
+
+    function send(text, status) {
+      return Promise.resolve(new Response(text, { status: status || 200 }));
+    }
+
+    var path = new RealURL(href).pathname.replace(/^\/api\/lounge\//, '');
+
+    if (path === 'pairing/get_screen') {
+      var code = new URLSearchParams(body).get('pairing_code');
+      if (code !== '123456789012') return send('{"error":"invalid"}', 404);
+      return send(JSON.stringify({ screen: { screenId: 'SCREEN-1', name: 'Test TV' } }));
+    }
+    if (path === 'pairing/get_lounge_token_batch') {
+      if (!window.__test.tokenValid) return send(JSON.stringify({ screens: [{ screenId: 'SCREEN-1' }] }));
+      return send(JSON.stringify({ screens: [{ screenId: 'SCREEN-1', loungeToken: 'TOKEN-1' }] }));
+    }
+    if (path === 'pairing/get_screen_availability') {
+      return send(JSON.stringify({ screens: [{ screenId: 'SCREEN-1', status: window.__test.tvOnline ? 'online' : 'offline' }] }));
+    }
+    if (path === 'bc/bind') {
+      if (window.__test.commandStatus !== 200) return send('{"error":"denied"}', window.__test.commandStatus);
+
+      // Bağlantı kurma isteği
+      if (body.indexOf('id=SCREEN-1') >= 0) return send(encodeChunk(HANDSHAKE));
+
+      var params = new URLSearchParams(body);
+      var sc = params.get('req0__sc');
+      if (body.indexOf('TYPE=terminate') >= 0) {
+        window.__test.commands.push('terminate');
+        return send('');
+      }
+      window.__test.commands.push(sc);
+      if (sc === 'setPlaylist') {
+        TV.videoId = params.get('req0_videoId') || TV.videoId;
+        TV.currentTime = '0';
+        TV.state = '1';
+        return send(encodeChunk([loungeEvent('nowPlaying', TV)]));
+      }
+      if (sc === 'getNowPlaying') { TV.currentTime = '42'; return send(encodeChunk([loungeEvent('nowPlaying', TV)])); }
+      if (sc === 'pause') { TV.state = '2'; return send(encodeChunk([loungeEvent('onStateChange', '2')])); }
+      if (sc === 'play') { TV.state = '1'; return send(encodeChunk([loungeEvent('onStateChange', '1')])); }
+      if (sc === 'next') { return send(encodeChunk([loungeEvent('onStateChange', '1')])); }
+      return send(encodeChunk([]));
+    }
+    return send('{}', 404);
+  };
+
+  window.__test.TV = TV;
+</script>
+<script src="../smarttube-sender.user.js"></script>
+<script>
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      var api = window.__smartTubeSender;
+      if (!api) { fail('userscript yüklenmedi'); return; }
+      ok('userscript yüklendi');
+      if (!document.getElementById('smarttube-sender-button')) { fail('buton oluşturulmadı'); return; }
+      ok('buton oluşturuldu');
+    }, 300);
+  });
+</script>
+</body>
+</html>
