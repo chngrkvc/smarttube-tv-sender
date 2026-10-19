@@ -1,0 +1,24 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Syntax check
+        run: node --check smarttube-sender.user.js
+
+      - name: Unit tests
+        run: node test/lounge.test.cjs
+
+      - name: Extension package is in sync
+        run: node test/extension.test.cjs
